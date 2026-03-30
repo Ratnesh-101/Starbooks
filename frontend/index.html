@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Open Library — EC Department</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{--bg:#111;--card:#1a1a1a;--card2:#222;--border:#2a2a2a;--text:#fff;--muted:#666;--accent:#fff;--gold:#F59E0B}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+  .app{max-width:420px;margin:0 auto;position:relative;min-height:100vh}
+
+  /* ── pages ── */
+  .page{display:none;min-height:100vh;padding-bottom:70px}
+  .page.active{display:block}
+
+  /* ── navbar ── */
+  .nav{display:flex;justify-content:space-between;align-items:center;padding:18px 16px 14px;position:sticky;top:0;background:var(--bg);z-index:10;border-bottom:1px solid var(--border)}
+  .nav-title{font-size:15px;font-weight:500}
+  .nav-icon{width:32px;height:32px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid var(--border);font-size:14px}
+
+  /* ── bottom tab bar ── */
+  .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:420px;background:rgba(17,17,17,0.95);backdrop-filter:blur(10px);border-top:1px solid var(--border);display:flex;z-index:100}
+  .tab{flex:1;padding:12px 0 10px;text-align:center;cursor:pointer;font-size:10px;color:var(--muted);transition:color 0.15s}
+  .tab.on{color:#fff}
+  .tab svg{display:block;margin:0 auto 4px;width:20px;height:20px}
+
+  /* ── onboarding ── */
+  .ob-wrap{padding:48px 24px}
+  .ob-head{font-size:26px;font-weight:500;line-height:1.35;margin-bottom:8px}
+  .ob-sub{color:var(--muted);font-size:14px;margin-bottom:32px}
+  .chips{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:36px}
+  .chip{padding:9px 18px;border-radius:999px;border:1.5px solid var(--border);cursor:pointer;font-size:13px;color:var(--muted);transition:all 0.15s;-webkit-tap-highlight-color:transparent}
+  .chip.on{background:#fff;color:#111;border-color:#fff}
+  .btn-main{background:#fff;color:#111;border:none;padding:15px;border-radius:999px;font-size:15px;font-weight:500;cursor:pointer;width:100%;transition:opacity 0.15s}
+  .btn-main:disabled{opacity:0.3;cursor:default}
+  .btn-skip{text-align:center;font-size:13px;color:var(--muted);margin-top:14px;cursor:pointer}
+
+  /* ── search ── */
+  .search-wrap{padding:0 16px 16px;position:relative}
+  .search-inp{background:var(--card);border:1.5px solid var(--border);color:#fff;padding:11px 16px 11px 42px;border-radius:999px;width:100%;font-size:14px;outline:none}
+  .search-inp:focus{border-color:#444}
+  .search-ico{position:absolute;left:28px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--muted)}
+
+  /* ── section header ── */
+  .sec-hd{display:flex;justify-content:space-between;align-items:center;padding:0 16px;margin-bottom:10px}
+  .sec-hd h3{font-size:14px;font-weight:500}
+  .sec-hd span{font-size:12px;color:var(--muted)}
+
+  /* ── horizontal scroll strip ── */
+  .strip{display:flex;gap:10px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none}
+  .strip::-webkit-scrollbar{display:none}
+
+  /* ── book cards ── */
+  .bcard-v{flex-shrink:0;width:118px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .bcard-v:active{opacity:0.6}
+  .cover{border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:600;color:rgba(255,255,255,0.88);font-size:20px;letter-spacing:-0.5px;user-select:none}
+  .bcard-v .cover{height:105px}
+  .bcard-v .b-title{font-size:10px;color:#ccc;margin-top:6px;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+
+  .bcard-h{display:flex;gap:12px;background:var(--card);border-radius:12px;padding:12px;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:opacity 0.1s;margin:0 16px 10px}
+  .bcard-h:active{opacity:0.65}
+  .bcard-h .cover{width:52px;height:72px;flex-shrink:0;font-size:14px;border-radius:9px}
+  .bcard-h .b-info{flex:1;min-width:0}
+  .bcard-h .b-title{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px}
+  .bcard-h .b-author{font-size:11px;color:var(--muted);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .b-genre{display:inline-block;font-size:10px;background:#1e1e1e;color:#777;padding:3px 9px;border-radius:999px;border:1px solid var(--border)}
+
+  /* ── stars ── */
+  .stars{display:flex;gap:2px;align-items:center}
+  .stars span{color:var(--gold);font-size:11px}
+  .stars .count{font-size:10px;color:var(--muted);margin-left:3px}
+
+  /* ── grid 3-col ── */
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 16px}
+  .gcell{cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .gcell:active{opacity:0.65}
+  .gcell .cover{height:88px;font-size:16px;border-radius:9px}
+  .gcell .b-title{font-size:9px;color:#bbb;margin-top:5px;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+
+  /* ── detail page ── */
+  .det-back{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:14px 16px 0;display:flex;align-items:center;gap:5px}
+  .det-cover{margin:12px 16px;height:210px;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative}
+  .det-cover .ini{font-size:52px;font-weight:700;color:rgba(255,255,255,0.9)}
+  .det-cover .loc{position:absolute;bottom:14px;right:14px;font-size:10px;color:rgba(255,255,255,0.45);background:rgba(0,0,0,0.3);padding:3px 8px;border-radius:999px}
+  .det-body{padding:0 16px}
+  .det-genre{display:inline-block;font-size:11px;background:#1e1e1e;color:#888;padding:4px 12px;border-radius:999px;border:1px solid var(--border);margin-bottom:10px}
+  .det-title{font-size:19px;font-weight:500;line-height:1.35;margin-bottom:4px}
+  .det-author{color:var(--muted);font-size:14px;margin-bottom:12px}
+  .det-meta{display:flex;gap:16px;margin-bottom:18px}
+  .det-meta span{font-size:12px;color:#555}
+  .sec-label{font-size:11px;font-weight:500;color:#555;letter-spacing:0.1em;margin-bottom:8px}
+  .det-desc{font-size:13px;color:#888;line-height:1.8;margin-bottom:20px}
+  .tag-wrap{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px}
+  .tag{font-size:10px;background:var(--card);border:1px solid var(--border);color:#666;padding:3px 10px;border-radius:999px}
+
+  /* ── rate box ── */
+  .rate-box{background:var(--card);border-radius:14px;padding:16px;margin-bottom:22px;border:1px solid var(--border)}
+  .rate-box p{font-size:12px;font-weight:500;color:#aaa;margin-bottom:12px}
+  .rate-stars{display:flex;gap:10px}
+  .rate-stars span{font-size:30px;cursor:pointer;color:#222;transition:color 0.1s;-webkit-tap-highlight-color:transparent}
+  .rate-msg{font-size:11px;color:#555;margin-top:8px;min-height:16px}
+
+  /* ── similar ── */
+  .sim-card{display:flex;gap:12px;margin-bottom:10px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .sim-card:active{opacity:0.65}
+  .sim-card .cover{width:46px;height:64px;flex-shrink:0;font-size:12px;border-radius:8px}
+  .sim-card .b-title{font-size:12px;font-weight:500;line-height:1.35;margin-bottom:3px}
+  .sim-card .b-author{font-size:11px;color:var(--muted)}
+
+  /* ── loading / empty ── */
+  .loading{text-align:center;padding:60px 0;color:var(--muted);font-size:14px}
+  .empty{text-align:center;padding:60px 16px;color:var(--muted);font-size:14px}
+
+  /* ── search results page ── */
+  .result-info{font-size:12px;color:var(--muted);padding:0 16px;margin-bottom:14px}
+  .result-info em{color:#aaa;font-style:normal}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ══════════ ONBOARDING ══════════ -->
+  <div class="page active" id="pg-onboard">
+    <div class="ob-wrap">
+      <div style="font-size:15px;color:var(--muted);margin-bottom:48px">Open Library</div>
+      <div class="ob-head">What topics interest<br>you most?</div>
+      <p class="ob-sub">We'll personalise your recommendations</p>
+      <div class="chips" id="chip-wrap"></div>
+      <button class="btn-main" id="btn-continue" disabled onclick="goHome()">Continue →</button>
+      <p class="btn-skip" onclick="goHome()">Skip for now</p>
+    </div>
+  </div>
+
+  <!-- ══════════ HOME ══════════ -->
+  <div class="page" id="pg-home">
+    <div class="nav">
+      <div class="nav-icon" onclick="showPage('pg-search')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </div>
+      <span class="nav-title">Open Library</span>
+      <div class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+    </div>
+
+    <div style="padding:18px 16px 10px">
+      <p style="font-size:22px;font-weight:500" id="home-greeting">Good day</p>
+      <p style="font-size:13px;color:var(--muted);margin-top:4px">EC Department Library</p>
+    </div>
+
+    <!-- recommended strip -->
+    <div class="sec-hd" style="margin-top:14px"><h3>Recommended for you</h3></div>
+    <div class="strip" id="home-rec"></div>
+
+    <!-- subjects grid -->
+    <div id="home-subjects"></div>
+  </div>
+
+  <!-- ══════════ SEARCH PAGE ══════════ -->
+  <div class="page" id="pg-search">
+    <div class="nav">
+      <button onclick="showPage('pg-home')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px">← Back</button>
+      <span class="nav-title">Search</span>
+      <div style="width:32px"></div>
+    </div>
+    <div style="padding:14px 16px 12px;position:relative">
+      <span class="search-ico">⌕</span>
+      <input class="search-inp" id="srch" placeholder="Title, author or topic…" oninput="doSearch(this.value)" autofocus />
+    </div>
+    <div id="srch-results"><p class="empty">Start typing to search…</p></div>
+  </div>
+
+  <!-- ══════════ BOOK DETAIL PAGE ══════════ -->
+  <div class="page" id="pg-detail">
+    <button class="det-back" onclick="goBack()">← Back</button>
+    <div id="det-content"></div>
+  </div>
+
+</div>
+
+<!-- Tab bar -->
+<div class="tabbar">
+  <div class="tab on" id="tab-home" onclick="showTab('home')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Home
+  </div>
+  <div class="tab" id="tab-search" onclick="showTab('search')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    Search
+  </div>
+</div>
+
+<script>
+// ── Config ───────────────────────────────────────────────────────────
+const API = 'http://localhost:3000';   // change to your Railway URL when live
+
+// ── State ────────────────────────────────────────────────────────────
+let state = {
+  interests: JSON.parse(localStorage.getItem('interests') || '[]'),
+  prevPage: 'pg-home',
+  searchTimer: null,
+};
+
+const TOPICS = [
+  'Electronics','Power Systems','Digital Systems','Communication',
+  'Signal Processing','Microprocessors','Embedded Systems','Electromagnetics',
+  'Control Systems','Networking','Microelectronics','Instrumentation'
+];
+const TAG_MAP = {
+  'Electronics':      'circuits,semiconductors,analog',
+  'Power Systems':    'power',
+  'Digital Systems':  'digital',
+  'Communication':    'communication',
+  'Signal Processing':'signals,DSP',
+  'Microprocessors':  'microprocessors',
+  'Embedded Systems': 'embedded',
+  'Electromagnetics': 'electromagnetics',
+  'Control Systems':  'control',
+  'Networking':       'networking',
+  'Microelectronics': 'microelectronics',
+  'Instrumentation':  'instrumentation,measurement',
+};
+
+// ── Utilities ────────────────────────────────────────────────────────
+const $  = id => document.getElementById(id);
+const ini = title => title.split(' ').filter(w => w.length > 2).slice(0,2).map(w=>w[0]).join('').toUpperCase() || 'BK';
+const starsHTML = (r, cnt) => {
+  let h = '';
+  for(let i=1;i<=5;i++) h += `<span style="color:${i<=Math.round(r)?'#F59E0B':'#2a2a2a'};font-size:11px">★</span>`;
+  h += `<span class="count">${r>0?Number(r).toFixed(1):''} ${cnt>0?`(${cnt})`:'No ratings'}</span>`;
+  return `<div class="stars">${h}</div>`;
+};
+
+function cover(book, h, extraStyle='') {
+  return `<div class="cover" style="height:${h}px;background:${book.cover_color||'#374151'};${extraStyle}">${ini(book.title)}</div>`;
+}
+
+// ── Pages ────────────────────────────────────────────────────────────
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  $(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function showTab(tab) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  if(tab==='home'){ $('tab-home').classList.add('on'); showPage('pg-home'); }
+  else            { $('tab-search').classList.add('on'); showPage('pg-search'); $('srch').focus(); }
+}
+function goBack() {
+  showPage(state.prevPage || 'pg-home');
+}
+
+// ── Onboarding ───────────────────────────────────────────────────────
+function buildOnboarding() {
+  const wrap = $('chip-wrap');
+  wrap.innerHTML = TOPICS.map(t =>
+    `<div class="chip${state.interests.includes(t)?' on':''}" onclick="toggleInterest('${t}')">${t}</div>`
+  ).join('');
+  $('btn-continue').disabled = state.interests.length === 0;
+}
+
+function toggleInterest(t) {
+  state.interests = state.interests.includes(t)
+    ? state.interests.filter(x=>x!==t)
+    : [...state.interests, t];
+  localStorage.setItem('interests', JSON.stringify(state.interests));
+  buildOnboarding();
+}
+
+function goHome() {
+  showPage('pg-home');
+  loadHome();
+}
+
+// ── Home page ────────────────────────────────────────────────────────
+async function loadHome() {
+  const hour = new Date().getHours();
+  $('home-greeting').textContent = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
+  // Recommended strip
+  $('home-rec').innerHTML = '<div class="loading">Loading…</div>';
+  try {
+    const tags = state.interests.flatMap(i => (TAG_MAP[i]||'').split(',')).join(',');
+    const url  = tags ? `${API}/books/recommend?interests=${encodeURIComponent(tags)}` : `${API}/books`;
+    const books = await fetch(url).then(r=>r.json());
+    renderStrip(books.slice(0,8));
+  } catch(e) { $('home-rec').innerHTML = '<div class="empty">Could not load books.</div>'; }
+
+  // Subject sections
+  $('home-subjects').innerHTML = '<div class="loading">Loading subjects…</div>';
+  try {
+    const subjects = await fetch(`${API}/subjects`).then(r=>r.json());
+    let html = '';
+    for(const subj of subjects.slice(0,4)) {
+      const books = await fetch(`${API}/books?subject=${encodeURIComponent(subj)}`).then(r=>r.json());
+      if(!books.length) continue;
+      html += `<div style="margin-top:24px">
+        <div class="sec-hd"><h3>${subj}</h3><span>${books.length} books</span></div>
+        <div class="grid3">
+          ${books.slice(0,6).map(b => `
+            <div class="gcell" onclick="openBook(${b.id})">
+              ${cover(b,88)}
+              <div class="stars" style="margin-top:5px;font-size:9px">${'★'.repeat(Math.max(0,Math.round(b.rating||0)))}</div>
+              <div class="b-title">${b.title}</div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+    }
+    $('home-subjects').innerHTML = html || '';
+  } catch(e) { $('home-subjects').innerHTML = ''; }
+}
+
+function renderStrip(books) {
+  $('home-rec').innerHTML = books.map(b => `
+    <div class="bcard-v" onclick="openBook(${b.id})">
+      ${cover(b,105)}
+      ${starsHTML(b.rating||0, b.rating_count||0)}
+      <div class="b-title">${b.title}</div>
+    </div>`).join('');
+}
+
+// ── Search ───────────────────────────────────────────────────────────
+function doSearch(val) {
+  clearTimeout(state.searchTimer);
+  if(!val.trim()) { $('srch-results').innerHTML = '<p class="empty">Start typing to search…</p>'; return; }
+  $('srch-results').innerHTML = '<div class="loading">Searching…</div>';
+  state.searchTimer = setTimeout(async () => {
+    try {
+      const books = await fetch(`${API}/books?q=${encodeURIComponent(val)}`).then(r=>r.json());
+      if(!books.length) { $('srch-results').innerHTML = '<p class="empty">No books found.</p>'; return; }
+      $('srch-results').innerHTML =
+        `<p class="result-info">${books.length} result${books.length!==1?'s':''} for <em>"${val}"</em></p>` +
+        books.map(b=>`
+          <div class="bcard-h" onclick="openBook(${b.id}, 'pg-search')">
+            ${cover(b,72,'border-radius:9px')}
+            <div class="b-info">
+              <div class="b-title">${b.title}</div>
+              <div class="b-author">${b.author}</div>
+              ${starsHTML(b.rating||0, b.rating_count||0)}
+              <div style="margin-top:5px"><span class="b-genre">${b.subject}</span></div>
+            </div>
+          </div>`).join('');
+    } catch(e) { $('srch-results').innerHTML = '<p class="empty">Search failed.</p>'; }
+  }, 350);
+}
+
+// ── Book Detail ───────────────────────────────────────────────────────
+async function openBook(id, fromPage) {
+  state.prevPage = fromPage || 'pg-home';
+  showPage('pg-detail');
+  $('det-content').innerHTML = '<div class="loading" style="padding-top:80px">Loading…</div>';
+
+  // log view
+  fetch(`${API}/books/${id}/view`, {method:'POST'}).catch(()=>{});
+
+  try {
+    const [book, similar] = await Promise.all([
+      fetch(`${API}/books/${id}`).then(r=>r.json()),
+      fetch(`${API}/books/${id}/similar`).then(r=>r.json()),
+    ]);
+
+    const tags = (book.tags||'').split(',').map(t=>t.trim()).filter(Boolean);
+
+    $('det-content').innerHTML = `
+      <div class="det-cover" style="background:${book.cover_color||'#374151'}">
+        <div class="ini">${ini(book.title)}</div>
+        <div class="loc">📍 ${book.location||''}</div>
+      </div>
+      <div class="det-body">
+        <div class="det-genre">${book.subject}</div>
+        <h1 class="det-title">${book.title}</h1>
+        <p class="det-author">${book.author}</p>
+        <div class="det-meta">
+          <span>Acc. No: ${book.acc_no||'—'}</span>
+          <span>Call No: ${book.call_no||'—'}</span>
+        </div>
+        ${starsHTML(book.rating||0, book.rating_count||0)}
+
+        <div style="margin-top:20px">
+          <p class="sec-label">ABOUT THIS BOOK</p>
+          <p class="det-desc">${book.description||'No description available.'}</p>
+        </div>
+
+        ${tags.length ? `<div class="tag-wrap">${tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>` : ''}
+
+        <div class="rate-box">
+          <p>Rate this book</p>
+          <div class="rate-stars" id="rStars">
+            ${[1,2,3,4,5].map(i=>`<span data-v="${i}" onmouseover="hoverStar(${i})" onmouseout="unhoverStar()" onclick="rateStar(${id},${i})">★</span>`).join('')}
+          </div>
+          <p class="rate-msg" id="rMsg"></p>
+        </div>
+
+        ${similar.length ? `
+          <p class="sec-label" style="margin-bottom:12px">YOU MIGHT ALSO LIKE</p>
+          ${similar.map(s=>`
+            <div class="sim-card" onclick="openBook(${s.id})">
+              ${cover(s,64,'border-radius:8px')}
+              <div>
+                <div class="b-title">${s.title}</div>
+                <div class="b-author">${s.author}</div>
+                ${starsHTML(s.rating||0, s.rating_count||0)}
+              </div>
+            </div>`).join('')}` : ''}
+      </div>`;
+  } catch(e) {
+    $('det-content').innerHTML = '<p class="empty">Failed to load book.</p>';
+  }
+}
+
+// ── Rating interaction ────────────────────────────────────────────────
+function hoverStar(n) {
+  document.querySelectorAll('#rStars span').forEach((s,i) =>
+    s.style.color = i < n ? 'rgba(245,158,11,0.5)' : '#222'
+  );
+}
+function unhoverStar() {
+  document.querySelectorAll('#rStars span').forEach(s =>
+    s.style.color = s.dataset.active ? '#F59E0B' : '#222'
+  );
+}
+async function rateStar(bookId, n) {
+  document.querySelectorAll('#rStars span').forEach((s,i) => {
+    s.style.color = i < n ? '#F59E0B' : '#222';
+    if(i < n) s.dataset.active = '1'; else delete s.dataset.active;
+  });
+  const msg = $('rMsg');
+  msg.textContent = 'Saving…';
+  try {
+    await fetch(`${API}/books/${bookId}/rate`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({rating: n})
+    });
+    const labels = ['','Poor','Fair','Good','Very Good','Excellent'];
+    msg.textContent = `${labels[n]} — saved! ✓`;
+  } catch(e) { msg.textContent = 'Failed to save rating.'; }
+}
+
+// ── Bootstrap ────────────────────────────────────────────────────────
+(function init() {
+  buildOnboarding();
+  // If user already chose interests before, skip onboarding
+  if(localStorage.getItem('onboardingDone')) {
+    showPage('pg-home');
+    loadHome();
+  }
+  $('btn-continue').addEventListener('click', () => {
+    localStorage.setItem('onboardingDone','1');
+  });
+})();
+</script>
+</body>
+</html>
