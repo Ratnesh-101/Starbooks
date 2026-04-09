@@ -2,6 +2,11 @@ const express = require('express');
 const mysql   = require('mysql2');
 const cors    = require('cors');
 const path    = require('path');
+const bcrypt  = require('bcrypt');
+const jwt     = require('jsonwebtoken');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'starbooks_secret_change_in_production';
+const SALT_ROUNDS = 10;
 
 const app = express();
 app.use(cors());
@@ -144,6 +149,94 @@ app.post('/books/:id/view', (req, res) => {
   db.query('INSERT INTO user_views (book_id) VALUES (?)', [req.params.id], (err) =>
     err ? res.status(500).json({ error: err.message }) : res.json({ ok: true })
   );
+});
+
+// ── POST /auth/signup ─────────────────────────────────────────────────
+app.post('/auth/signup', async (req, res) => {
+  const { name, email, password } = req.body;
+
+  if (!name || !email || !password)
+    return res.status(400).json({ error: 'Name, email, and password are required.' });
+
+  if (password.length < 6)
+    return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+
+  try {
+    db.query('SELECT id FROM users WHERE email = ?', [email], async (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (rows.length) return res.status(409).json({ error: 'Email already in use.' });
+
+      const hash = await bcrypt.hash(password, SALT_ROUNDS);
+
+      db.query(
+        'INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)',
+        [name, email, hash],
+        (err2, result) => {
+          if (err2) return res.status(500).json({ error: err2.message });
+
+          const token = jwt.sign(
+            { id: result.insertId, name, email },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+          );
+
+          res.status(201).json({
+            message: 'Account created successfully!',
+            token,
+            user: { id: result.insertId, name, email }
+          });
+        }
+      );
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── POST /auth/login ──────────────────────────────────────────────────
+app.post('/auth/login', (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password)
+    return res.status(400).json({ error: 'Email and password are required.' });
+
+  db.query('SELECT * FROM users WHERE email = ?', [email], async (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!rows.length) return res.status(401).json({ error: 'Invalid email or password.' });
+
+    const user = rows[0];
+    const match = await bcrypt.compare(password, user.password_hash);
+
+    if (!match) return res.status(401).json({ error: 'Invalid email or password.' });
+
+    const token = jwt.sign(
+      { id: user.id, name: user.name, email: user.email },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      message: 'Login successful!',
+      token,
+      user: { id: user.id, name: user.name, email: user.email }
+    });
+  });
+});
+
+// ── GET /auth/me  (verify token + return user info) ───────────────────
+app.get('/auth/me', (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer '))
+    return res.status(401).json({ error: 'No token provided.' });
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    res.json({ user: { id: decoded.id, name: decoded.name, email: decoded.email } });
+  } catch {
+    res.status(401).json({ error: 'Invalid or expired token.' });
+  }
 });
 
 // ── Catch-all → serve index.html ─────────────────────────────────────
